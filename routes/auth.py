@@ -11,6 +11,7 @@ from utils.form_validators import (
     create_login_validator,
     create_user_confirmation_validator,
 )
+from model.label_handler import get_labels_id
 
 
 def init(app, database):
@@ -30,7 +31,7 @@ def init(app, database):
             cursor = database.cursor()
             cursor.execute(
                 """
-                INSERT INTO users (email, password, createdAt)
+                INSERT INTO users (email, password, created_at)
                 VALUES (%s, %s, %s)
                 """,
                 (email, hashed_password.decode("utf-8"), round(time.time())),
@@ -71,7 +72,11 @@ def init(app, database):
 
             token = Token.generate_token({"userId": user[0], "email": user[1]})
 
-            return {"token": token, "message": "Успешная авторизация!"}, 200
+            return {
+                "token": token,
+                "categories": get_labels_id(),
+                "message": "Успешная авторизация!",
+            }, 200
         except Exception as ex:
             print(repr(ex))
             return exception_handler(ex)
@@ -83,7 +88,7 @@ def init(app, database):
     @auth_middleware
     def user_confirmation():
         try:
-            email, password = request.user["email"], request.json["password"]
+            user_id, password = request.user["user_id"], request.json["password"]
 
             confirmation_form = create_user_confirmation_validator()
             confirmation_form.validate()
@@ -93,18 +98,22 @@ def init(app, database):
             cursor = database.cursor()
             cursor.execute(
                 """
-                SELECT id, email, password FROM users
-                WHERE email = '%s'
+                SELECT id, password FROM users
+                WHERE id = '%s'
                 """
-                % email
+                % user_id
             )
             user = cursor.fetchone()
-            if (not user) or (
-                not bcrypt.checkpw(password.encode("utf-8"), user[2].encode("utf-8"))
-            ):
+            if not user:
+                raise ApiError.unauthorized_error()
+
+            if not bcrypt.checkpw(password.encode("utf-8"), user[1].encode("utf-8")):
                 raise ApiError.bad_request("Неверный пароль!")
 
-            return {"message": "Успешная идентификация!"}, 200
+            return {
+                "categories": get_labels_id(),
+                "message": "Успешная идентификация!",
+            }, 200
         except Exception as ex:
             print(repr(ex))
             return exception_handler(ex)

@@ -1,6 +1,7 @@
-from . import auth, model
+from . import auth, model, user
 
 
 def init(app, database):
     auth.init(app, database)
-    model.init(app)
+    user.init(app, database)
+    model.init(app, database)

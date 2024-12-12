@@ -7,7 +7,9 @@ from nltk.tokenize import word_tokenize
 import pymorphy2
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
-import json
+
+from .label_handler import get_labels_id
+
 
 nltk.download("stopwords")
 nltk.download("punkt_tab")
@@ -39,10 +41,7 @@ model.eval()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
-with open(f"{model_path}/label_to_id.json", "r", encoding="utf-8") as f:
-    label_to_id = json.load(f)
-
-id_to_label = {int(v): k for k, v in label_to_id.items()}
+id_to_label = get_labels_id()
 
 
 def predict(text):
@@ -61,4 +60,4 @@ def predict(text):
     probabilities = torch.nn.functional.softmax(logits, dim=-1)
     confidence = probabilities[0, predicted_class_id].item()
 
-    return predicted_class_id, predicted_label, confidence
+    return predicted_class_id, confidence
