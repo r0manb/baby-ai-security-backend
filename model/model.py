@@ -55,9 +55,7 @@ def predict(text):
 
     logits = outputs.logits
     predicted_class_id = logits.argmax(dim=-1).item()
-    predicted_label = id_to_label[predicted_class_id]
-    print(predicted_class_id, predicted_label)
     probabilities = torch.nn.functional.softmax(logits, dim=-1)
     confidence = probabilities[0, predicted_class_id].item()
-
-    return predicted_class_id, confidence
+    print(predicted_class_id, id_to_label[predicted_class_id], confidence)
+    return predicted_class_id

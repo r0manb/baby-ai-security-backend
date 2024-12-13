@@ -1,3 +1,4 @@
+import re
 import time
 
 from flask import request
@@ -7,17 +8,23 @@ from exceptions.exception_handler import exception_handler
 from middlewares.auth import auth_middleware
 
 
-def init(app, database):
+def init(app, database, redis_cache):
 
     @app.route("/api/predict", methods=["POST"])
     @auth_middleware
     def predict():
         try:
-            user_id = request.user['user_id']
-            name, url = request.json['name'], request.json['url']
+            user_id = request.user["user_id"]
+            name, url = request.json["name"], request.json["url"]
 
-            preprocessed_text = model.preprocess_text(request.json["text"])
-            category_id, confidence = model.predict(preprocessed_text)
+            processed_url = re.sub(r"[^a-zA-Z0-9]", "", url)
+            redis_key = f"predictions:{processed_url}"
+            if redis_cache.exists(redis_key):
+                category_id = int(redis_cache.get(redis_key))
+            else:
+                preprocessed_text = model.preprocess_text(request.json["text"])
+                category_id = model.predict(preprocessed_text)
+                redis_cache.setex(redis_key, 604800, category_id)
 
             cursor = database.cursor()
             cursor.execute(
@@ -31,8 +38,6 @@ def init(app, database):
 
             return {
                 "category_id": category_id,
-                "category_label": "category_label",
-                "confidence": confidence,
             }, 200
 
         except Exception as ex:
