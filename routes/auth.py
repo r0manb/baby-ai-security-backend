@@ -1,6 +1,7 @@
-import bcrypt
-import time
+import datetime
+
 from flask import request
+import bcrypt
 
 from middlewares.auth import auth_middleware
 from exceptions.exception_handler import exception_handler
@@ -31,10 +32,17 @@ def init(app, database):
             cursor = database.cursor()
             cursor.execute(
                 """
-                INSERT INTO users (email, password, created_at)
+                INSERT INTO users (
+                    email,
+                    password,
+                    created_at)
                 VALUES (%s, %s, %s)
                 """,
-                (email, hashed_password.decode("utf-8"), round(time.time())),
+                (
+                    email,
+                    hashed_password.decode("utf-8"),
+                    datetime.datetime.now(datetime.timezone.utc),
+                ),
             )
             database.commit()
 
@@ -59,7 +67,10 @@ def init(app, database):
             cursor = database.cursor()
             cursor.execute(
                 """
-                SELECT id, email, password FROM users
+                SELECT id,
+                       email,
+                       password
+                FROM users
                 WHERE email = '%s'
                 """
                 % email
@@ -98,7 +109,9 @@ def init(app, database):
             cursor = database.cursor()
             cursor.execute(
                 """
-                SELECT id, password FROM users
+                SELECT id,
+                       password
+                FROM users
                 WHERE id = '%s'
                 """
                 % user_id

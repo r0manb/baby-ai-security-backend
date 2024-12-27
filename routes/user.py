@@ -15,7 +15,11 @@ def init(app, database):
             cursor = database.cursor()
             cursor.execute(
                 """
-                SELECT category_id, name, url, created_at FROM history
+                SELECT category_id,
+                       name,
+                       url,
+                       created_at
+                FROM history
                 WHERE user_id = '%s'
                 ORDER BY created_at DESC
                 """

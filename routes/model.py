@@ -1,5 +1,5 @@
+import datetime
 import re
-import time
 
 from flask import request
 
@@ -29,10 +29,23 @@ def init(app, database, redis_cache):
             cursor = database.cursor()
             cursor.execute(
                 """
-                INSERT INTO history (user_id, category_id, name, url, created_at)
+                INSERT INTO history (
+                    user_id,
+                    category_id,
+                    name,
+                    url,
+                    created_at)
                 VALUES (%s, %s, %s, %s, %s)
                 """,
-                (user_id, category_id, name[:100], url, round(time.time())),
+                (
+                    user_id,
+                    category_id,
+                    name[:100],
+                    url,
+                    datetime.datetime.now(datetime.timezone.utc).strftime(
+                        r"%Y-%m-%d %H:%M:%S"
+                    ),
+                ),
             )
             database.commit()
 
