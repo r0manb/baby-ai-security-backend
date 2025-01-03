@@ -12,7 +12,7 @@ from utils.form_validators import (
     create_login_validator,
     create_user_confirmation_validator,
 )
-from model.label_handler import get_labels_id
+from model.label_handler import get_labels_id, get_neutral_category_id
 
 
 def init(app, database):
@@ -85,7 +85,10 @@ def init(app, database):
 
             return {
                 "token": token,
-                "categories": get_labels_id(),
+                "categories": {
+                    "list": get_labels_id(),
+                    "neutral_category_id": get_neutral_category_id()
+                },
                 "message": "Успешная авторизация!",
             }, 200
         except Exception as ex:
@@ -124,7 +127,10 @@ def init(app, database):
                 raise ApiError.bad_request("Неверный пароль!")
 
             return {
-                "categories": get_labels_id(),
+                "categories": {
+                    "list": get_labels_id(),
+                    "neutral_category_id": get_neutral_category_id()
+                },
                 "message": "Успешная идентификация!",
             }, 200
         except Exception as ex:

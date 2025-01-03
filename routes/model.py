@@ -4,6 +4,7 @@ import re
 from flask import request
 
 from model import model
+from model.label_handler import get_neutral_category_id
 from exceptions.exception_handler import exception_handler
 from middlewares.auth import auth_middleware
 
@@ -26,32 +27,31 @@ def init(app, database, redis_cache):
                 category_id = model.predict(preprocessed_text)
                 redis_cache.setex(redis_key, 604800, category_id)
 
-            cursor = database.cursor()
-            cursor.execute(
-                """
-                INSERT INTO history (
-                    user_id,
-                    category_id,
-                    name,
-                    url,
-                    created_at)
-                VALUES (%s, %s, %s, %s, %s)
-                """,
-                (
-                    user_id,
-                    category_id,
-                    name[:100],
-                    url,
-                    datetime.datetime.now(datetime.timezone.utc).strftime(
-                        r"%Y-%m-%d %H:%M:%S"
+            if get_neutral_category_id() != category_id:
+                cursor = database.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO history (
+                        user_id,
+                        category_id,
+                        name,
+                        url,
+                        created_at)
+                    VALUES (%s, %s, %s, %s, %s)
+                    """,
+                    (
+                        user_id,
+                        category_id,
+                        name[:100],
+                        url,
+                        datetime.datetime.now(datetime.timezone.utc).strftime(
+                            r"%Y-%m-%d %H:%M:%S"
+                        ),
                     ),
-                ),
-            )
-            database.commit()
+                )
+                database.commit()
 
-            return {
-                "category_id": category_id,
-            }, 200
+            return {"category_id": category_id}, 200
 
         except Exception as ex:
             print(repr(ex))
