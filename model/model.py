@@ -18,18 +18,14 @@ morph = pymorphy2.MorphAnalyzer()
 
 
 def preprocess_text(text):
-    text = text.lower()
-    text = re.sub(r"http\S+|www.\S+|mailto:\S+", "", text)
-    text = re.sub(r"[^а-яё\s]", "", text)
-    tokens = word_tokenize(text, language="russian")
+    text = re.sub(r"http\S+|www.\S+|mailto:\S+|[^а-яё\s]", "", text.lower())
     tokens = [
         morph.normal_forms(token)[0]
-        for token in tokens
+        for token in word_tokenize(text, language="russian")
         if token not in russian_stopwords and token.isalpha()
     ]
-    text = " ".join(tokens)
 
-    return text
+    return " ".join(tokens)
 
 
 model_path = os.path.dirname(os.path.abspath(__file__)) + "/model_bundle"
@@ -46,14 +42,17 @@ id_to_label = get_labels_id()
 
 def predict(text):
     inputs = tokenizer(
-        text, padding="max_length", truncation=True, max_length=512, return_tensors="pt"
+        text,
+        padding="max_length",
+        truncation=True,
+        max_length=512,
+        return_tensors="pt",
     )
     inputs = {k: v.to(device) for k, v in inputs.items()}
 
     with torch.no_grad():
-        outputs = model(**inputs)
+        logits = model(**inputs).logits
 
-    logits = outputs.logits
     predicted_class_id = logits.argmax(dim=-1).item()
     probabilities = torch.nn.functional.softmax(logits, dim=-1)
     confidence = probabilities[0, predicted_class_id].item()
