@@ -20,14 +20,18 @@ def init(app, database):
     @app.route("/api/auth/register", methods=["POST"])
     def register():
         try:
-            email, password = request.json["email"], request.json["password"]
+            email = request.json["email"]
+            password = request.json["password"]
 
             register_form = create_register_validator(database)
             register_form.validate()
             if register_form.errors:
                 raise ApiError.bad_request(errors=register_form.errors)
 
-            hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+            hashed_password = bcrypt.hashpw(
+                password.encode("utf-8"),
+                bcrypt.gensalt(),
+            )
 
             cursor = database.cursor()
             cursor.execute(
@@ -46,7 +50,9 @@ def init(app, database):
             )
             database.commit()
 
-            return {"message": "Пользователь успешно зарегестрирован!"}, 201
+            return {
+                "message": "Пользователь успешно зарегестрирован!",
+            }, 201
         except Exception as ex:
             print(repr(ex))
             return exception_handler(ex)
@@ -57,7 +63,8 @@ def init(app, database):
     @app.route("/api/auth/login", methods=["POST"])
     def login():
         try:
-            email, password = request.json["email"], request.json["password"]
+            email = request.json["email"]
+            password = request.json["password"]
 
             login_form = create_login_validator()
             login_form.validate()
@@ -77,7 +84,10 @@ def init(app, database):
             )
             user = cursor.fetchone()
             if (not user) or (
-                not bcrypt.checkpw(password.encode("utf-8"), user[2].encode("utf-8"))
+                not bcrypt.checkpw(
+                    password.encode("utf-8"),
+                    user[2].encode("utf-8"),
+                )
             ):
                 raise ApiError.bad_request("Неверный логин или пароль!")
 
@@ -87,7 +97,7 @@ def init(app, database):
                 "token": token,
                 "categories": {
                     "list": get_labels_id(),
-                    "neutral_category_id": get_neutral_category_id()
+                    "neutral_category_id": get_neutral_category_id(),
                 },
                 "message": "Успешная авторизация!",
             }, 200
@@ -102,7 +112,8 @@ def init(app, database):
     @auth_middleware
     def user_confirmation():
         try:
-            user_id, password = request.user["user_id"], request.json["password"]
+            user_id = request.user["user_id"]
+            password = request.json["password"]
 
             confirmation_form = create_user_confirmation_validator()
             confirmation_form.validate()
@@ -123,13 +134,16 @@ def init(app, database):
             if not user:
                 raise ApiError.unauthorized_error()
 
-            if not bcrypt.checkpw(password.encode("utf-8"), user[1].encode("utf-8")):
+            if not bcrypt.checkpw(
+                password.encode("utf-8"),
+                user[1].encode("utf-8"),
+            ):
                 raise ApiError.bad_request("Неверный пароль!")
 
             return {
                 "categories": {
                     "list": get_labels_id(),
-                    "neutral_category_id": get_neutral_category_id()
+                    "neutral_category_id": get_neutral_category_id(),
                 },
                 "message": "Успешная идентификация!",
             }, 200

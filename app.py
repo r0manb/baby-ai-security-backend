@@ -21,7 +21,9 @@ def main():
             password=os.getenv("DB_PASSWORD"),
         )
         redis_cache = redis.Redis(
-            host=os.getenv("REDIS_HOST"), port=os.getenv("REDIS_PORT"), db=0
+            host=os.getenv("REDIS_HOST"),
+            port=os.getenv("REDIS_PORT"),
+            db=0,
         )
     except Exception as ex:
         print("Ошибка базы данных:", repr(ex))

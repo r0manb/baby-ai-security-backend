@@ -30,7 +30,9 @@ class Token:
     def validate_token(token):
         try:
             data = jwt.decode(
-                jwt=token, key=os.getenv("JWT_SECRET_KEY"), algorithms=["HS256"]
+                jwt=token,
+                key=os.getenv("JWT_SECRET_KEY"),
+                algorithms=["HS256"],
             )
 
             return data

@@ -21,7 +21,10 @@ def create_login_validator():
             ],
         )
         password = StringField(
-            "password", validators=[InputRequired("Обязательное поле")]
+            "password",
+            validators=[
+                InputRequired("Обязательное поле"),
+            ],
         )
 
     return LoginValidator()
@@ -40,7 +43,10 @@ def create_register_validator(database):
             "password",
             validators=[
                 InputRequired("Обязательное поле"),
-                Length(min=6, message="Пароль должен быть минимум из 6 символов"),
+                Length(
+                    min=6,
+                    message="Пароль должен быть минимум из 6 символов",
+                ),
             ],
         )
         password_confirm = StringField(
@@ -59,7 +65,8 @@ def create_register_validator(database):
                 cursor = database.cursor()
                 cursor.execute(
                     """
-                    SELECT id, email, password FROM users
+                    SELECT email
+                    FROM users
                     WHERE email = '%s'
                     """
                     % email.data
@@ -83,7 +90,10 @@ def create_register_validator(database):
 def create_user_confirmation_validator():
     class UserConfirmationValidator(FlaskForm):
         password = StringField(
-            "password", validators=[InputRequired("Обязательное поле")]
+            "password",
+            validators=[
+                InputRequired("Обязательное поле"),
+            ],
         )
 
     return UserConfirmationValidator()

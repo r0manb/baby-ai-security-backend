@@ -19,7 +19,10 @@ def auth_middleware(func):
             if not tokenData:
                 return exception_handler(ApiError.unauthorized_error())
 
-            request.user = {"user_id": tokenData["userId"], "email": tokenData["email"]}
+            request.user = {
+                "user_id": tokenData["userId"],
+                "email": tokenData["email"],
+            }
 
             return func(*args, **kwargs)
 
