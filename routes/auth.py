@@ -33,22 +33,22 @@ def init(app, database):
                 bcrypt.gensalt(),
             )
 
-            cursor = database.cursor()
-            cursor.execute(
-                """
-                INSERT INTO users (
-                    email,
-                    password,
-                    created_at)
-                VALUES (%s, %s, %s)
-                """,
-                (
-                    email,
-                    hashed_password.decode("utf-8"),
-                    datetime.datetime.now(datetime.timezone.utc),
-                ),
-            )
-            database.commit()
+            with database.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO users (
+                        email,
+                        password,
+                        created_at)
+                    VALUES (%s, %s, %s)
+                    """,
+                    (
+                        email,
+                        hashed_password.decode("utf-8"),
+                        datetime.datetime.now(datetime.timezone.utc),
+                    ),
+                )
+                database.commit()
 
             return {
                 "message": "Пользователь успешно зарегестрирован!",
@@ -56,9 +56,6 @@ def init(app, database):
         except Exception as ex:
             print(repr(ex))
             return exception_handler(ex)
-        finally:
-            if "cursor" in locals():
-                cursor.close()
 
     @app.route("/api/auth/login", methods=["POST"])
     def login():
@@ -71,18 +68,19 @@ def init(app, database):
             if login_form.errors:
                 raise ApiError.bad_request(errors=login_form.errors)
 
-            cursor = database.cursor()
-            cursor.execute(
-                """
-                SELECT id,
-                       email,
-                       password
-                FROM users
-                WHERE email = '%s'
-                """
-                % email
-            )
-            user = cursor.fetchone()
+            with database.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id,
+                        email,
+                        password
+                    FROM users
+                    WHERE email = %s
+                    """,
+                    (email,),
+                )
+                user = cursor.fetchone()
+
             if (not user) or (
                 not bcrypt.checkpw(
                     password.encode("utf-8"),
@@ -104,9 +102,6 @@ def init(app, database):
         except Exception as ex:
             print(repr(ex))
             return exception_handler(ex)
-        finally:
-            if "cursor" in locals():
-                cursor.close()
 
     @app.route("/api/auth/user_confirmation", methods=["POST"])
     @auth_middleware
@@ -120,17 +115,18 @@ def init(app, database):
             if confirmation_form.errors:
                 raise ApiError.bad_request(errors=confirmation_form.errors)
 
-            cursor = database.cursor()
-            cursor.execute(
-                """
-                SELECT id,
-                       password
-                FROM users
-                WHERE id = '%s'
-                """
-                % user_id
-            )
-            user = cursor.fetchone()
+            with database.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id,
+                        password
+                    FROM users
+                    WHERE id = %s
+                    """,
+                    (user_id,),
+                )
+                user = cursor.fetchone()
+
             if not user:
                 raise ApiError.unauthorized_error()
 
@@ -150,6 +146,3 @@ def init(app, database):
         except Exception as ex:
             print(repr(ex))
             return exception_handler(ex)
-        finally:
-            if "cursor" in locals():
-                cursor.close()

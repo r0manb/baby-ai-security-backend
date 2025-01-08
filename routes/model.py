@@ -28,34 +28,30 @@ def init(app, database, redis_cache):
                 redis_cache.setex(redis_key, 604800, category_id)
 
             if get_neutral_category_id() != category_id:
-                cursor = database.cursor()
-                cursor.execute(
-                    """
-                    INSERT INTO history (
-                        user_id,
-                        category_id,
-                        name,
-                        url,
-                        created_at)
-                    VALUES (%s, %s, %s, %s, %s)
-                    """,
-                    (
-                        user_id,
-                        category_id,
-                        name[:100],
-                        url,
-                        datetime.datetime.now(datetime.timezone.utc).strftime(
-                            r"%Y-%m-%d %H:%M:%S"
+                with database.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        INSERT INTO history (
+                            user_id,
+                            category_id,
+                            name,
+                            url,
+                            created_at)
+                        VALUES (%s, %s, %s, %s, %s)
+                        """,
+                        (
+                            user_id,
+                            category_id,
+                            name[:100],
+                            url,
+                            datetime.datetime.now(datetime.timezone.utc).strftime(
+                                r"%Y-%m-%d %H:%M:%S"
+                            ),
                         ),
-                    ),
-                )
-                database.commit()
+                    )
+                    database.commit()
 
             return {"category_id": category_id}, 200
-
         except Exception as ex:
             print(repr(ex))
             return exception_handler(ex)
-        finally:
-            if "cursor" in locals():
-                cursor.close()

@@ -62,16 +62,16 @@ def create_register_validator(database):
                 raise StopValidation()
 
             try:
-                cursor = database.cursor()
-                cursor.execute(
-                    """
-                    SELECT email
-                    FROM users
-                    WHERE email = '%s'
-                    """
-                    % email.data
-                )
-                user = cursor.fetchone()
+                with database.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        SELECT email
+                        FROM users
+                        WHERE email = %s
+                        """,
+                        (email.data,),
+                    )
+                    user = cursor.fetchone()
                 if user:
                     raise ValidationError("Почта уже используется")
 
@@ -79,10 +79,6 @@ def create_register_validator(database):
                 if isinstance(ex, (ValidationError, StopValidation)):
                     raise ex
                 return exception_handler(ex)
-
-            finally:
-                if "cursor" in locals():
-                    cursor.close()
 
     return RegisterValidator()
 

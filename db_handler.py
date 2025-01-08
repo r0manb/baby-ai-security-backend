@@ -15,13 +15,12 @@ def main():
             password=os.getenv("DB_PASSWORD"),
         )
 
-        cursor = db_conn.cursor()
-        cursor.execute(open("BAIS schema.sql", "r").read())
-        db_conn.commit()
+        with db_conn.cursor() as cursor:
+            cursor.execute(open("BAIS schema.sql", "r").read())
+            db_conn.commit()
     except Exception as ex:
         print(repr(ex))
     finally:
-        cursor.close()
         db_conn.close()
 
 
