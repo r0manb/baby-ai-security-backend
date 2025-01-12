@@ -89,7 +89,12 @@ def init(app, database):
             ):
                 raise ApiError.bad_request("Неверный логин или пароль!")
 
-            token = Token.generate_token({"userId": user[0], "email": user[1]})
+            token = Token.generate_token(
+                {
+                    "user_id": user[0],
+                    "email": user[1],
+                }
+            )
 
             return {
                 "token": token,

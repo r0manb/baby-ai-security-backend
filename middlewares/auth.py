@@ -15,13 +15,13 @@ def auth_middleware(func):
                 return exception_handler(ApiError.unauthorized_error())
 
             token = str(request.authorization).split()[1]
-            tokenData = Token.validate_token(token)
-            if not tokenData:
+            token_data = Token.validate_token(token)
+            if not token_data:
                 return exception_handler(ApiError.unauthorized_error())
 
             request.user = {
-                "user_id": tokenData["userId"],
-                "email": tokenData["email"],
+                "user_id": token_data["user_id"],
+                "email": token_data["email"],
             }
 
             return func(*args, **kwargs)

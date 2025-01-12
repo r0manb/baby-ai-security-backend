@@ -12,14 +12,14 @@ class Token:
 
     @staticmethod
     def generate_token(payload):
-        issuedAt = datetime.datetime.now(tz=datetime.timezone.utc)
+        issued_at = datetime.datetime.now(tz=datetime.timezone.utc)
 
         token = jwt.encode(
             payload={
                 **payload,
-                "exp": issuedAt + datetime.timedelta(days=7),
-                "iat": issuedAt,
-                "nbf": issuedAt,
+                "exp": issued_at + datetime.timedelta(days=7),
+                "iat": issued_at,
+                "nbf": issued_at,
             },
             key=os.getenv("JWT_SECRET_KEY"),
         )
