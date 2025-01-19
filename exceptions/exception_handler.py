@@ -1,4 +1,4 @@
-from exceptions.ApiError import ApiError
+from exceptions.api_error import ApiError
 
 
 def exception_handler(ex):

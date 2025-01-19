@@ -3,8 +3,8 @@ from functools import wraps
 from flask import request
 
 from exceptions.exception_handler import exception_handler
-from exceptions.ApiError import ApiError
-from utils.Token import Token
+from exceptions.api_error import ApiError
+from services.token import access_token_service
 
 
 def auth_middleware(func):
@@ -15,7 +15,7 @@ def auth_middleware(func):
                 return exception_handler(ApiError.unauthorized_error())
 
             token = str(request.authorization).split()[1]
-            token_data = Token.validate_token(token)
+            token_data = access_token_service.validate_token(token)
             if not token_data:
                 return exception_handler(ApiError.unauthorized_error())
 

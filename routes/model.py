@@ -1,10 +1,8 @@
-import datetime
-import re
-
 from flask import request
 
-from model import model
-from model.label_handler import get_neutral_category_id
+from services.model import model_service
+from services.user import user_service
+from model.model import ai_model
 from exceptions.exception_handler import exception_handler
 from middlewares.auth import auth_middleware
 
@@ -16,40 +14,23 @@ def init(app, database, redis_cache):
     def predict():
         try:
             user_id = request.user["user_id"]
-            name, url = request.json["name"], request.json["url"]
+            name = request.json["name"]
+            url = request.json["url"]
+            text = request.json["text"]
 
-            processed_url = re.sub(r"[^a-zA-Z0-9]", "", url)
-            redis_key = f"predictions:{processed_url}"
-            if redis_cache.exists(redis_key):
-                category_id = int(redis_cache.get(redis_key))
-            else:
-                preprocessed_text = model.preprocess_text(request.json["text"])
-                category_id = model.predict(preprocessed_text)
-                redis_cache.setex(redis_key, 604800, category_id)
-
-            if get_neutral_category_id() != category_id:
-                with database.cursor() as cursor:
-                    cursor.execute(
-                        """
-                        INSERT INTO history (
-                            user_id,
-                            category_id,
-                            name,
-                            url,
-                            created_at)
-                        VALUES (%s, %s, %s, %s, %s)
-                        """,
-                        (
-                            user_id,
-                            category_id,
-                            name[:100],
-                            url,
-                            datetime.datetime.now(datetime.timezone.utc).strftime(
-                                r"%Y-%m-%d %H:%M:%S"
-                            ),
-                        ),
-                    )
-                    database.commit()
+            category_id = model_service.predict_category(
+                url,
+                text,
+                redis_cache,
+            )
+            if category_id != ai_model.get_neutral_category_id():
+                user_service.add_to_history(
+                    user_id,
+                    category_id,
+                    name,
+                    url,
+                    database,
+                )
 
             return {"category_id": category_id}, 200
         except Exception as ex:

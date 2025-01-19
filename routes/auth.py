@@ -1,18 +1,14 @@
-import datetime
+from flask import request, make_response
 
-from flask import request
-import bcrypt
-
+from services.auth import auth_service
 from middlewares.auth import auth_middleware
 from exceptions.exception_handler import exception_handler
-from exceptions.exception_handler import ApiError
-from utils.Token import Token
+from exceptions.api_error import ApiError
 from utils.form_validators import (
-    create_register_validator,
-    create_login_validator,
-    create_user_confirmation_validator,
+    LoginValidator,
+    RegisterValidator,
+    UserConfirmationValidator
 )
-from model.label_handler import get_labels_id, get_neutral_category_id
 
 
 def init(app, database):
@@ -23,32 +19,12 @@ def init(app, database):
             email = request.json["email"]
             password = request.json["password"]
 
-            register_form = create_register_validator(database)
+            register_form = RegisterValidator(database=database)
             register_form.validate()
             if register_form.errors:
                 raise ApiError.bad_request(errors=register_form.errors)
 
-            hashed_password = bcrypt.hashpw(
-                password.encode("utf-8"),
-                bcrypt.gensalt(),
-            )
-
-            with database.cursor() as cursor:
-                cursor.execute(
-                    """
-                    INSERT INTO users (
-                        email,
-                        password,
-                        created_at)
-                    VALUES (%s, %s, %s)
-                    """,
-                    (
-                        email,
-                        hashed_password.decode("utf-8"),
-                        datetime.datetime.now(datetime.timezone.utc),
-                    ),
-                )
-                database.commit()
+            auth_service.register(email, password, database)
 
             return {
                 "message": "Пользователь успешно зарегестрирован!",
@@ -63,47 +39,27 @@ def init(app, database):
             email = request.json["email"]
             password = request.json["password"]
 
-            login_form = create_login_validator()
+            login_form = LoginValidator()
             login_form.validate()
             if login_form.errors:
                 raise ApiError.bad_request(errors=login_form.errors)
 
-            with database.cursor() as cursor:
-                cursor.execute(
-                    """
-                    SELECT id,
-                        email,
-                        password
-                    FROM users
-                    WHERE email = %s
-                    """,
-                    (email,),
-                )
-                user = cursor.fetchone()
+            refresh_token, data = auth_service.login(email, password, database)
 
-            if (not user) or (
-                not bcrypt.checkpw(
-                    password.encode("utf-8"),
-                    user[2].encode("utf-8"),
-                )
-            ):
-                raise ApiError.bad_request("Неверный логин или пароль!")
-
-            token = Token.generate_token(
+            res = make_response(
                 {
-                    "user_id": user[0],
-                    "email": user[1],
+                    **data,
+                    "message": "Успешная авторизация!",
                 }
             )
+            res.set_cookie(
+                "refresh_token",
+                refresh_token,
+                httponly=True,
+                secure=True,
+            )
 
-            return {
-                "token": token,
-                "categories": {
-                    "list": get_labels_id(),
-                    "neutral_category_id": get_neutral_category_id(),
-                },
-                "message": "Успешная авторизация!",
-            }, 200
+            return res
         except Exception as ex:
             print(repr(ex))
             return exception_handler(ex)
@@ -115,39 +71,51 @@ def init(app, database):
             user_id = request.user["user_id"]
             password = request.json["password"]
 
-            confirmation_form = create_user_confirmation_validator()
+            confirmation_form = UserConfirmationValidator()
             confirmation_form.validate()
             if confirmation_form.errors:
                 raise ApiError.bad_request(errors=confirmation_form.errors)
 
-            with database.cursor() as cursor:
-                cursor.execute(
-                    """
-                    SELECT id,
-                        password
-                    FROM users
-                    WHERE id = %s
-                    """,
-                    (user_id,),
-                )
-                user = cursor.fetchone()
-
-            if not user:
-                raise ApiError.unauthorized_error()
-
-            if not bcrypt.checkpw(
-                password.encode("utf-8"),
-                user[1].encode("utf-8"),
-            ):
-                raise ApiError.bad_request("Неверный пароль!")
+            data = auth_service.user_confirmation(user_id, password, database)
 
             return {
-                "categories": {
-                    "list": get_labels_id(),
-                    "neutral_category_id": get_neutral_category_id(),
-                },
+                **data,
                 "message": "Успешная идентификация!",
             }, 200
+        except Exception as ex:
+            print(repr(ex))
+            return exception_handler(ex)
+
+    @app.route("/api/auth/logout", methods=["POST"])
+    def logout():
+        try:
+            refresh_token = request.cookies.get("refresh_token")
+
+            auth_service.logout(refresh_token, database)
+
+            res = make_response()
+            res.set_cookie("refresh_token", "", expires=0)
+
+            return res
+        except Exception as ex:
+            print(repr(ex))
+            return exception_handler(ex)
+
+    @app.route("/api/auth/refresh", methods=["POST"])
+    def refresh():
+        try:
+            token = request.cookies.get("refresh_token")
+            access_token, refresh_token = auth_service.refresh(token, database)
+
+            res = make_response({"token": access_token})
+            res.set_cookie(
+                "refresh_token",
+                refresh_token,
+                httponly=True,
+                secure=True,
+            )
+
+            return res
         except Exception as ex:
             print(repr(ex))
             return exception_handler(ex)

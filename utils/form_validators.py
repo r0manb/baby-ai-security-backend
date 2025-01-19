@@ -11,85 +11,80 @@ from wtforms.validators import (
 from exceptions.exception_handler import exception_handler
 
 
-def create_login_validator():
-    class LoginValidator(FlaskForm):
-        email = StringField(
-            "email",
-            validators=[
-                InputRequired("Обязательное поле"),
-                Email(message="Некорректная почта"),
-            ],
-        )
-        password = StringField(
-            "password",
-            validators=[
-                InputRequired("Обязательное поле"),
-            ],
-        )
-
-    return LoginValidator()
+class LoginValidator(FlaskForm):
+    email = StringField(
+        "email",
+        validators=[
+            InputRequired("Обязательное поле"),
+            Email(message="Некорректная почта"),
+        ],
+    )
+    password = StringField(
+        "password",
+        validators=[
+            InputRequired("Обязательное поле"),
+        ],
+    )
 
 
-def create_register_validator(database):
-    class RegisterValidator(FlaskForm):
-        email = StringField(
-            "email",
-            validators=[
-                InputRequired("Обязательное поле"),
-                Email(message="Некорректная почта"),
-            ],
-        )
-        password = StringField(
-            "password",
-            validators=[
-                InputRequired("Обязательное поле"),
-                Length(
-                    min=6,
-                    message="Пароль должен быть минимум из 6 символов",
-                ),
-            ],
-        )
-        password_confirm = StringField(
-            "password_confirm",
-            validators=[
-                InputRequired("Обязательное поле"),
-                EqualTo("password", "Пароли не совпадают"),
-            ],
-        )
+class RegisterValidator(FlaskForm):
+    email = StringField(
+        "email",
+        validators=[
+            InputRequired("Обязательное поле"),
+            Email(message="Некорректная почта"),
+        ],
+    )
+    password = StringField(
+        "password",
+        validators=[
+            InputRequired("Обязательное поле"),
+            Length(
+                min=6,
+                message="Пароль должен быть минимум из 6 символов",
+            ),
+        ],
+    )
+    password_confirm = StringField(
+        "password_confirm",
+        validators=[
+            InputRequired("Обязательное поле"),
+            EqualTo("password", "Пароли не совпадают"),
+        ],
+    )
 
-        def validate_email(self, email):
-            if email.errors:
-                raise StopValidation()
+    def __init__(self, *args, database=None, **kwargs):
+        super(RegisterValidator, self).__init__(*args, **kwargs)
+        self.database = database
 
-            try:
-                with database.cursor() as cursor:
-                    cursor.execute(
-                        """
-                        SELECT email
-                        FROM users
-                        WHERE email = %s
-                        """,
-                        (email.data,),
-                    )
-                    user = cursor.fetchone()
-                if user:
-                    raise ValidationError("Почта уже используется")
+    def validate_email(self, email):
+        if email.errors:
+            raise StopValidation()
 
-            except Exception as ex:
-                if isinstance(ex, (ValidationError, StopValidation)):
-                    raise ex
-                return exception_handler(ex)
+        try:
+            with self.database.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT email
+                    FROM users
+                    WHERE email = %s
+                    """,
+                    (email.data,),
+                )
+                user = cursor.fetchone()
+            if user:
+                raise ValidationError("Почта уже используется")
 
-    return RegisterValidator()
+        except Exception as ex:
+            if isinstance(ex, (ValidationError, StopValidation)):
+                raise ex
+            return exception_handler(ex)
 
 
-def create_user_confirmation_validator():
-    class UserConfirmationValidator(FlaskForm):
-        password = StringField(
-            "password",
-            validators=[
-                InputRequired("Обязательное поле"),
-            ],
-        )
-
-    return UserConfirmationValidator()
+class UserConfirmationValidator(FlaskForm):
+    password = StringField(
+        "password",
+        validators=[
+            InputRequired("Обязательное поле"),
+        ],
+    )
